@@ -26,11 +26,6 @@
             "comp_hack\\": "src/"
         }
     },
-    "extra": {
-        "branch-alias": {
-            "dev-master": "develop"
-        }
-    },
     "scripts": {
         "test": "./vendor/bin/phpunit"
     }
