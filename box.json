@@ -1,0 +1,18 @@
+{
+    "chmod": "0755",
+    "directories": [
+        "src"
+    ],
+    "files": [
+        "LICENSE"
+    ],
+    "finder": [
+        {
+            "name": "*.php",
+            "exclude": ["spec", "Tests", "tests"],
+            "in": "vendor"
+        }
+    ],
+    "output": "comp_phpapi.phar",
+    "stub": true
+}
