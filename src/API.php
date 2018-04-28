@@ -2,12 +2,12 @@
 
 class API
 {
-    private $http;
-    private $server;
-    private $username;
-    private $salt;
-    private $challenge;
-    private $password_hash;
+    protected $http;
+    protected $server;
+    protected $username;
+    protected $salt;
+    protected $password_hash;
+    protected $challenge;
 
     public function __construct($server, $username)
     {
@@ -31,6 +31,11 @@ class API
     {
         return $this->username;
     } // function GetUsername
+
+    public function GetPasswordHash(): string
+    {
+        return $this->password_hash;
+    } // function GetPasswordHash
 
     public function SetHttpClient($http)
     {
@@ -66,6 +71,12 @@ class API
                 $password . $this->salt);
             $this->challenge = hash('sha512', $this->password_hash .
                 $response->challenge);
+
+            $this->SaveSession();
+        }
+        catch(\GuzzleHttp\Exception\ConnectException $e)
+        {
+            return false;
         }
         catch(\GuzzleHttp\Exception\ClientException $e)
         {
@@ -110,7 +121,13 @@ class API
             $this->challenge = hash('sha512', $this->password_hash .
                 $response->challenge);
 
+            $this->SaveSession();
+
             return $response;
+        }
+        catch(\GuzzleHttp\Exception\ConnectException $e)
+        {
+            return false;
         }
         catch(\GuzzleHttp\Exception\ClientException $e)
         {
@@ -134,6 +151,63 @@ class API
         return $response->cp;
     }
 
+    public function GetAccountDetails()
+    {
+        $response = $this->Request('account/get_details');
+
+        if(false === $response ||
+            !property_exists($response, 'cp') ||
+            !property_exists($response, 'username') ||
+            !property_exists($response, 'disp_name') ||
+            !property_exists($response, 'email') ||
+            !property_exists($response, 'ticket_count') ||
+            !property_exists($response, 'user_level') ||
+            !property_exists($response, 'enabled') ||
+            !property_exists($response, 'last_login'))
+        {
+            return false;
+        }
+
+        $object = new \stdClass();
+        $object->username = $response->username;
+        $object->displayName = $response->disp_name;
+        $object->email = $response->email;
+        $object->ticketCount = (int)$response->ticket_count;
+        $object->userLevel = $response->user_level;
+        $object->enabled = (bool)$response->enabled;
+        /// @todo Convert this to a Carbon object?
+        $object->lastLogin = (int)$response->last_login;
+
+        return $object;
+    }
+
+    public function GetWebAuthLogin($clientVersion)
+    {
+        $response = $this->Request('account/client_login', array(
+            'client_version' => $clientVersion
+        ));
+
+        if(false === $response ||
+            !property_exists($response, 'error') ||
+            !property_exists($response, 'error_code'))
+        {
+            return false;
+        }
+
+        $object = new \stdClass();
+        $object->error = $response->error;
+        $object->errorCode = $response->error_code;
+
+        if(property_exists($response, 'sid1') &&
+            property_exists($response, 'sid2'))
+        {
+            $object->sid1 = $response->sid1;
+            $object->sid2 = $response->sid2;
+        }
+
+        return $object;
+    }
+
     public function Register($username, $email, $password)
     {
         try
@@ -143,22 +217,42 @@ class API
             $request['email'] = $email;
             $request['password'] = $password;
 
-            $uri = $this->server . "/account/register";
-            $response = \Httpful\Request::post($uri)->sendsJson(
-                )->expectsJson()->body($request)->send();
+            $response = $this->http->post('account/register',
+                ['json' => $request]);
 
-            if($response->hasErrors())
+            if(200 != $response->getStatusCode() ||
+                !$response->hasHeader('Content-Type') ||
+                'application/json' != $response->getheader('Content-Type')[0])
             {
                 return false;
             }
 
-            return $response->body->error;
+            $response = json_decode($response->getBody()->getContents());
+
+            if(!$response || !is_object($response) ||
+                !property_exists($response, 'error'))
+            {
+                return false;
+            }
+
+            return $response->error;
+        }
+        catch(\GuzzleHttp\Exception\ConnectException $e)
+        {
+            return false;
+        }
+        catch(\GuzzleHttp\Exception\ClientException $e)
+        {
+            return false;
         }
         catch(Exception $e)
         {
             return false;
         }
     } // function Register
-} // class Session
 
-?>
+    protected function SaveSession()
+    {
+        // Extend this class and implement if you need a session.
+    } // function SaveSession
+} // class Session
