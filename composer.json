@@ -10,6 +10,11 @@
             "name": "COMP Omega",
             "email": "compomega@tutanota.com",
             "role": "Lead Developer"
+        },
+        {
+          "name": "Soleil",
+          "email": "solcode@outlook.com",
+          "role": "Web Engineer"
         }
     ],
     "require": {
