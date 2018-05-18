@@ -1,5 +1,15 @@
 <?php declare(strict_types=1); namespace comp_hack;
 
+/*
+|--------------------------------------------------------------------------
+| COMPHACK PHP API
+|--------------------------------------------------------------------------
+| This is a full implementation of the API of the current release of the comp_hack server emulator.
+| For this version of the API the current release is Kodama v2.2.1
+| This should be extended inside your project and SaveSession should be overrided
+| to save your session object.
+*/
+
 class API
 {
     protected $http;
@@ -9,6 +19,12 @@ class API
     protected $password_hash;
     protected $challenge;
 
+    /**
+     * Creates a new instance of this API, and sets the base information we need to start with.
+     * Generally this should be followed with an Authenticate
+     * @param string $server   The full url of the API server [EX: '127.0.0.1:10999/api']
+     * @param string $username The username to be used to login to the API.
+     */
     public function __construct($server, $username)
     {
         if(substr($server, -1) != '/')
@@ -22,26 +38,48 @@ class API
         $this->username = $username;
     } // function __construct
 
+    /**
+     * Returns the address being used to access the API
+     * @return string URL of the API server.
+     */
     public function GetServer(): string
     {
         return $this->server;
     } // function GetServer
 
+    /**
+     * Returns the username of the current API user.
+     * @return string The username of the current API user.
+     */
     public function GetUsername(): string
     {
         return $this->username;
     } // function GetUsername
 
+    /**
+     * Gets the current password hash. Only available after it is constructed in Authenticate
+     * @return string the password hash.
+     */
     public function GetPasswordHash(): string
     {
         return $this->password_hash;
     } // function GetPasswordHash
 
+    /**
+     * A setter function to use a different http client. It's in the name.
+     * @param object $http an object to be used to make API requests.
+     */
     public function SetHttpClient($http)
     {
         $this->http = $http;
     } // function SetHttpClient
 
+    /**
+     * Authenticates the user specified during __construct.
+     * Is required before accessing any endpoints other than auth/get_challenge and account/register
+     * @param  string $password A password to be hashed and checked against the challenge.
+     * @return bool             Whether or not the Authentication was successful.
+     */
     public function Authenticate($password): bool
     {
         try
@@ -90,6 +128,14 @@ class API
         return true;
     } // function Authenticate
 
+    /**
+     * Helper function to make extending this API much easier.
+     * Sends a POST request from the currently authenticated user to the enpoint specified.
+     * This function should never need to be used outside of this file.
+     *
+     * @param string $api_method The URI of the api endpoint minus the '/api/' part
+     * @param array  $request    A key=>value array of objects that will be converted to JSON and sent in the POST body.
+     */
     public function Request($api_method, $request = array())
     {
         try
@@ -139,6 +185,9 @@ class API
         }
     } // function Request
 
+    /**
+     * Gets the CP of the currently authenticated account.
+     */
     public function GetCP()
     {
         $response = $this->Request('account/get_cp');
@@ -151,6 +200,18 @@ class API
         return $response->cp;
     }
 
+    /**
+     * Gets the details of the account currently Authenticated.
+     *
+     * This returns an account object containing fields:
+     *  username string
+     *  displayName string
+     *  email string
+     *  ticketCount int
+     *  userLevel int
+     *  enabled boolean
+     *  lastlogin timestamp
+     */
     public function GetAccountDetails()
     {
         $response = $this->Request('account/get_details');
@@ -208,6 +269,16 @@ class API
         return $object;
     }
 
+    /**
+     * Registers a new user to the game server.
+     * Does not require to be authenticated to use.
+     *
+     * @param string $username The username to log into the game server.
+     * @param string $email    The email on record for the game server.
+     * @param string $password The desired password.
+     *
+     * Users must be authenticated after registering in order to auto log-in.
+     */
     public function Register($username, $email, $password)
     {
         try
@@ -251,6 +322,104 @@ class API
         }
     } // function Register
 
+    /**
+     * Returns an array of user objects each object includes all details about the user besides their hash and salt.
+     * Must be authenticated as an admin to use.
+     */
+    public function GetAccounts()
+    {
+      $response = $this->Request('admin/get_accounts');
+
+      if(false === $response ||
+        !property_exists($response, 'accounts'))
+      {
+        return false;
+      }
+
+      $accounts = array();
+
+      foreach ($response->accounts as $account) {
+
+        $object = new \stdClass();
+        $object->username = $account->username;
+        $object->displayName = $account->disp_name;
+        $object->email = $account->email;
+        $object->ticketCount = (int)$account->ticket_count;
+        $object->userLevel = $account->user_level;
+        $object->enabled = (bool)$account->enabled;
+        $object->lastLogin = (int)$account->last_login;
+        $object->characterCount = (int)$account->character_count;
+
+        array_push($accounts, $object);
+      }
+
+      return $accounts;
+    } //function GetAccounts
+
+    /**
+     * Delete's the account specified by username.
+     * Must be authenticated as an admin to use.
+     * @param string $username The Username of the account to be deleted.
+     */
+    public function DeleteAccount($username)
+    {
+      $response = $this->Request('admin/delete_account', array(
+        'username' => $username
+      ));
+
+      if(false === $response) {
+        return false;
+      }
+
+      return true;
+    }//function DeleteAccount
+
+    /**
+     * [This will update any users account by changing their fields with values specified by the same key in $changeArray]
+     * @param string $username    The Username of the account to be changed.]
+     * @param array $changeArray  An array of keys and that match to at least one of the following list.
+     * Valid $changeArray keys are:
+     *  password  string | Changes Password.
+     *  disp_name string | Changes display name.
+     *  cp        int    | Changes CP Value.
+     *  ticket_count int | changes amount of character tickets.
+     *  user_level  int  | Sets the user level 0 is default 1000 is admin.
+     *  enabled  boolean | Controls if the account can login to the game.
+     */
+    public function UpdateAccount($username, $changeArray)
+    {
+      $response = $this->Request('admin/update_account', $changeArray);
+      if(false === $response ||
+        !is_object($response) ||
+        !property_exists($response, 'error'))
+      {
+          return false;
+      }
+      return $response;
+    }//function UpdateUser
+
+    /**
+     * Changes the password of the current user.
+     * @param string $password the new password to be changed to.
+     */
+    public function ChangePassword($password)
+    {
+      $response = $this->Request('account/change_password', [password => $password]);
+
+      if(false === $response ||
+        !is_object($response) ||
+        !property_exists($response, 'error'))
+      {
+        return false;
+      }
+
+      return $response;
+    }
+
+    /**
+     * A function to be overrided in the implementation of the API.
+     * Called at the end of every Request();
+     */
     protected function SaveSession()
     {
         // Extend this class and implement if you need a session.
