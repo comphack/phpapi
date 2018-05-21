@@ -229,12 +229,14 @@ class API
             return false;
         }
 
+        /// @todo convert this to actual user class.
         $object = new \stdClass();
+        $object->cp = $response->cp;
         $object->username = $response->username;
         $object->displayName = $response->disp_name;
         $object->email = $response->email;
         $object->ticketCount = (int)$response->ticket_count;
-        $object->userLevel = $response->user_level;
+        $object->userLevel = (int)$response->user_level;
         $object->enabled = (bool)$response->enabled;
         /// @todo Convert this to a Carbon object?
         $object->lastLogin = (int)$response->last_login;
@@ -242,6 +244,12 @@ class API
         return $object;
     }
 
+    /**
+     * Used by the client to login. Pointed to in the webaccess.sdat file.
+     *
+     * @param string $clientVersion  The client version string to check.
+     * Must match the current servers client version variable.
+     */
     public function GetWebAuthLogin($clientVersion)
     {
         $response = $this->Request('account/client_login', array(
@@ -323,6 +331,41 @@ class API
     } // function Register
 
     /**
+     * Allows you to request an account from the game server bu username.
+     * @param string $username The username of the account to be retrived
+     */
+    public function GetAccount($username) {
+      $response = $this->Request('admin/get_account', array(
+        'username' => $username
+      ));
+
+      if(false === $response ||
+        !property_exists($response, 'username') ||
+        !property_exists($response, 'disp_name') ||
+        !property_exists($response, 'email') ||
+        !property_exists($response, 'ticket_count') ||
+        !property_exists($response, 'user_level') ||
+        !property_exists($response, 'enabled') ||
+        !property_exists($response, 'last_login') ||
+        !property_exists($response, 'character_count'))
+      {
+        return false;
+      }
+
+      $object = new \stdClass();
+      $object->username = $response->username;
+      $object->displayName = $response->disp_name;
+      $object->email = $response->email;
+      $object->ticketCount = (int)$response->ticket_count;
+      $object->userLevel = $response->user_level;
+      $object->enabled = (bool)$response->enabled;
+      $object->lastLogin = (int)$response->last_login;
+      $object->characterCount = (int)$response->character_count;
+
+      return $object;
+    }
+
+    /**
      * Returns an array of user objects each object includes all details about the user besides their hash and salt.
      * Must be authenticated as an admin to use.
      */
@@ -388,7 +431,7 @@ class API
      */
     public function UpdateAccount($username, $changeArray)
     {
-      $response = $this->Request('admin/update_account', $changeArray);
+      $response = $this->Request('admin/update_account', array_merge($changeArray, array('username' => $username)));
       if(false === $response ||
         !is_object($response) ||
         !property_exists($response, 'error'))
@@ -404,7 +447,7 @@ class API
      */
     public function ChangePassword($password)
     {
-      $response = $this->Request('account/change_password', [password => $password]);
+      $response = $this->Request('account/change_password', ['password' => $password]);
 
       if(false === $response ||
         !is_object($response) ||
@@ -414,7 +457,7 @@ class API
       }
 
       return $response;
-    }
+    }//function ChangePassword
 
     /**
      * A function to be overrided in the implementation of the API.

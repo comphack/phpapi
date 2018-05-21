@@ -44,6 +44,8 @@ final class APITest extends TestCase
         //$this->username = 'omega';
         //$this->password = 'arbychicken';
         //$this->use_mock = false;
+        //$api = new API($this->server, 'testuser');
+        //$api->Register('testuser', 'testuser@test.test', 'testing');
     }
 
     public function tearDown()
@@ -235,7 +237,173 @@ final class APITest extends TestCase
 
         $cp = $api->GetCP();
         $this->assertInternalType('int', $cp);
-        $this->assertEquals(1000000, $cp);
+        if($this->use_mock) {
+          $this->assertEquals(1000000, $cp);
+        }
+    }
+
+    public function assertTypeUser($ad) {
+      $this->assertObjectHasAttribute('username', $ad);
+      $this->assertObjectHasAttribute('displayName', $ad);
+      $this->assertObjectHasAttribute('email', $ad);
+      $this->assertObjectHasAttribute('ticketCount', $ad);
+      $this->assertObjectHasAttribute('userLevel', $ad);
+      $this->assertObjectHasAttribute('enabled', $ad);
+      $this->assertObjectHasAttribute('lastLogin', $ad);
+
+      $this->assertInternalType('string', $ad->username);
+      $this->assertInternalType('string', $ad->displayName);
+      $this->assertInternalType('string', $ad->email);
+      $this->assertInternalType('int', $ad->ticketCount);
+      $this->assertInternalType('int', $ad->userLevel);
+      $this->assertInternalType('bool', $ad->enabled);
+      $this->assertInternalType('int', $ad->lastLogin);
+    }
+
+    public function testAccountDetails() {
+      $this->MockAuthenticate();
+      $this->MockRequest('account/get_details', array(), array(
+        'cp' => 1000000,
+        'username' => 'testuser',
+        'disp_name' => 'testuserdisplay',
+        'email' => 'testing@test.test',
+        'ticket_count' => 1,
+        'user_level' => 1000,
+        'enabled' => true,
+        'last_login' => 0
+      ));
+
+      list($mock_http, $api) = $this->MockAPI();
+
+      $ad = $api->GetAccountDetails();
+
+      $this->assertObjectHasAttribute('cp', $ad);
+      $this->assertInternalType('int', $ad->cp);
+      $this->assertTypeUser($ad);
+
+      if($this->use_mock) {
+        $this->assertEquals(1000000, $ad->cp);
+        $this->assertEquals('testuser', $ad->username);
+        $this->assertEquals('testuserdisplay', $ad->displayName);
+        $this->assertEquals('testing@test.test', $ad->email);
+        $this->assertEquals(1, $ad->ticketCount);
+        $this->assertEquals(1000, $ad->userLevel);
+        $this->assertEquals(true, $ad->enabled);
+        $this->assertEquals(0, $ad->lastLogin);
+      }
+    }
+
+    public function testGetAccount() {
+      $this->MockAuthenticate();
+      $this->MockRequest('admin/get_account', array('username' => 'testuser'), array(
+        'username' => 'testuser',
+        'disp_name' => 'testuserdisplay',
+        'email' => 'testing@test.test',
+        'ticket_count' => 1,
+        'user_level' => 1000,
+        'enabled' => true,
+        'last_login' => 0,
+        'character_count' => 0
+      ));
+
+      list($mock_http, $api) = $this->MockAPI();
+
+      $account = $api->GetAccount('testuser');
+
+      $this->assertTypeUser($account);
+
+      if($this->use_mock) {
+        $this->assertEquals('testuser', $account->username);
+        $this->assertEquals('testuserdisplay', $account->displayName);
+        $this->assertEquals('testing@test.test', $account->email);
+        $this->assertEquals(1, $account->ticketCount);
+        $this->assertEquals(1000, $account->userLevel);
+        $this->assertEquals(true, $account->enabled);
+        $this->assertEquals(0, $account->lastLogin);
+        $this->assertEquals(0, $account->characterCount);
+      }
+    }
+
+    public function testGetAccounts() {
+      $this->MockAuthenticate();
+      $this->MockRequest('admin/get_accounts', array(), array('accounts' => array(array(
+        'username' => 'testuser',
+        'disp_name' => 'testuserdisplay',
+        'email' => 'testing@test.test',
+        'ticket_count' => 1,
+        'user_level' => 1000,
+        'enabled' => true,
+        'last_login' => 0,
+        'character_count' => 0
+      ), array(
+        'username' => 'testuser2',
+        'disp_name' => 'testuser2display',
+        'email' => 'testing@test.test',
+        'ticket_count' => 1,
+        'user_level' => 1000,
+        'enabled' => true,
+        'last_login' => 0,
+        'character_count' => 0
+      ))));
+
+      list($mock_http, $api) = $this->MockAPI();
+      $accounts = $api->GetAccounts();
+
+      foreach($accounts as $account) {
+        $this->assertTypeUser($account);
+      }
+
+      if($this->use_mock) {
+        $this->assertEquals('testuser', $accounts[0]->username);
+        $this->assertEquals('testuserdisplay', $accounts[0]->displayName);
+        $this->assertEquals('testing@test.test', $accounts[0]->email);
+        $this->assertEquals(1, $accounts[0]->ticketCount);
+        $this->assertEquals(1000, $accounts[0]->userLevel);
+        $this->assertEquals(true, $accounts[0]->enabled);
+        $this->assertEquals(0, $accounts[0]->lastLogin);
+        $this->assertEquals(0, $accounts[0]->characterCount);
+      }
+    }
+
+    public function testDeleteAccount() {
+      $this->MockAuthenticate();
+      $this->MockRequest('admin/delete_account', array('username' => 'testuser'), array());
+
+      list($mock_http, $api) = $this->MockAPI();
+      $delete = $api->DeleteAccount('testuser');
+
+      $this->assertEquals(true, $delete);
+    }
+
+    public function testUpdateAccount() {
+      $this->MockAuthenticate();
+      $this->MockRequest('admin/update_account', array(
+        'username' => 'testuser',
+        'cp' => 100000
+      ), array(
+        'error' => 'Success'
+      ));
+
+      list($mock_http, $api) = $this->MockAPI();
+      $update = $api->UpdateAccount('testuser', array('cp' => 100000));
+
+      $this->assertObjectHasAttribute('error', $update);
+      $this->assertInternalType('string', $update->error);
+      $this->assertEquals('Success', $update->error);
+    }
+
+    public function testChangePassword() {
+      $this->MockAuthenticate();
+      $this->MockRequest('account/change_password', array('password' => 'testing2'), array(
+        'error' => 'Success'
+      ));
+
+      list($mock_http, $api) = $this->MockAPI();
+      $changePw = $api->ChangePassword('testing2');
+
+      $this->assertObjectHasAttribute('error', $changePw);
+      $this->assertInternalType('string', $changePw->error);
+      $this->assertEquals('Success', $changePw->error);
     }
 }
 
