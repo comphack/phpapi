@@ -460,6 +460,73 @@ class API
     }//function ChangePassword
 
     /**
+     * Gets a list of promotions.
+     */
+    public function GetPromos()
+    {
+        $response = $this->Request('admin/get_promos');
+
+        if(false === $response ||
+            !is_object($response) ||
+            !property_exists($response, 'promos'))
+        {
+            return false;
+        }
+
+        return $response['promos'];
+    } // function GetPromos
+
+    /**
+     * Creates a new promotion code that can be used to get items.
+     * @param code Promotion code to use. This must be unique.
+     * @param startTime Timestamp for the start of the promotion.
+     * @param endTime Timestamp for the end of the promotion.
+     * @param useLimit Number of times the promotion may be used.
+     * @param limitType What type to limit by the use limit. Can be 'character',
+     *   'world' or 'account'.
+     * @param items List of shop product item IDs to give during the promotion.
+     */
+    public function CreatePromo(string $code, \DateTime $startTime,
+        \DateTime $endTime, int $useLimit, string $limitType, array $items)
+    {
+        $response = $this->Request('admin/create_promo', [
+            'code' => $code,
+            'startTime' => $startTime->getTimestamp(),
+            'endTime' => $endTime->getTimestamp(),
+            'useLimit' => $useLimit,
+            'limitType' => $limitType,
+            'items' => $items
+        ]);
+
+        if(false === $response ||
+            !is_object($response) ||
+            !property_exists($response, 'error'))
+        {
+            return false;
+        }
+
+        return $response;
+    } // function CreatePromo
+
+    /**
+     * Deletes all promotions with the given code.
+     * @param code Code for promotion(s) to delete.
+     */
+    public function DeletePromo(string $code)
+    {
+        $response = $this->Request('admin/delete_promo', ['code' => $code]);
+
+        if(false === $response ||
+            !is_object($response) ||
+            !property_exists($response, 'error'))
+        {
+            return false;
+        }
+
+        return $response;
+    } // function DeletePromo
+
+    /**
      * A function to be overrided in the implementation of the API.
      * Called at the end of every Request();
      */

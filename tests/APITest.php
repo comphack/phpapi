@@ -405,6 +405,62 @@ final class APITest extends TestCase
       $this->assertInternalType('string', $changePw->error);
       $this->assertEquals('Success', $changePw->error);
     }
+
+    public function testCreateDeletePromo(): void
+    {
+        $startTime = new DateTime('NOW');
+        $endTime = new DateTime('NOW');
+        $endTime->add(new DateInterval('PT5M')); // 5 min
+
+        $this->MockAuthenticate();
+        $this->MockRequest('admin/create_promo', array(
+            'code' => 'abc-123',
+            'startTime' => $startTime->getTimestamp(),
+            'endTime' => $endTime->getTimestamp(),
+            'useLimit' => 0,
+            'limitType' => 'account',
+            'items' => array(1, 2, 3)
+        ), array(
+            'error' => 'Success'
+        ));
+        $this->MockRequest('admin/create_promo', array(
+            'code' => 'abc-123',
+            'startTime' => $startTime->getTimestamp(),
+            'endTime' => $endTime->getTimestamp(),
+            'useLimit' => 0,
+            'limitType' => 'world',
+            'items' => array(1, 2, 3)
+        ), array(
+            'error' => 'Promotion with that code already exists. Another will be made.'
+        ));
+        $this->MockRequest('admin/delete_promo', array(
+            'code' => 'abc-123'
+        ), array(
+            'error' => 'Deleted 2 promotions.'
+        ));
+
+        list($mock_http, $api) = $this->MockAPI();
+
+        $response = $api->CreatePromo('abc-123', $startTime, $endTime, 0,
+            'account', array(1, 2, 3));
+
+        $this->assertObjectHasAttribute('error', $response);
+        $this->assertInternalType('string', $response->error);
+        $this->assertEquals('Success', $response->error);
+
+        $response = $api->CreatePromo('abc-123', $startTime, $endTime, 0,
+            'world', array(1, 2, 3));
+
+        $this->assertObjectHasAttribute('error', $response);
+        $this->assertInternalType('string', $response->error);
+        $this->assertEquals('Promotion with that code already exists. Another will be made.', $response->error);
+
+        $response = $api->DeletePromo('abc-123');
+
+        $this->assertObjectHasAttribute('error', $response);
+        $this->assertInternalType('string', $response->error);
+        $this->assertEquals('Deleted 2 promotions.', $response->error);
+    }
 }
 
 ?>
