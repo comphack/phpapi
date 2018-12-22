@@ -4,7 +4,7 @@
     "description": "COMP_hack Server API for PHP",
     "keywords": ["comp_hack", "api", "smt", "imagine"],
     "homepage": "https://comphack.github.io",
-    "license": "AGPL-3.0-or-later",
+    "license": "LGPL-3.0-or-later",
     "authors": [
         {
             "name": "COMP Omega",
