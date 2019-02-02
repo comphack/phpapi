@@ -145,6 +145,7 @@ class API
                 $api_method = substr($api_method, 1);
             }
 
+            $request['username'] = $this->username;
             $request['challenge'] = $this->challenge;
             $response = $this->http->post($api_method,
                 ['json' => $request]);
