@@ -245,6 +245,7 @@ final class APITest extends TestCase
     }
 
     public function assertTypeUser($ad) {
+      $this->assertObjectHasAttribute('cp', $ad);
       $this->assertObjectHasAttribute('username', $ad);
       $this->assertObjectHasAttribute('displayName', $ad);
       $this->assertObjectHasAttribute('email', $ad);
@@ -298,6 +299,7 @@ final class APITest extends TestCase
     public function testGetAccount() {
       $this->MockAuthenticate();
       $this->MockRequest('admin/get_account', array('username' => 'testuser'), array(
+        'cp' => 1000000,
         'username' => 'testuser',
         'disp_name' => 'testuserdisplay',
         'email' => 'testing@test.test',
@@ -329,6 +331,7 @@ final class APITest extends TestCase
     public function testGetAccounts() {
       $this->MockAuthenticate();
       $this->MockRequest('admin/get_accounts', array(), array('accounts' => array(array(
+        'cp' => 1000000,
         'username' => 'testuser',
         'disp_name' => 'testuserdisplay',
         'email' => 'testing@test.test',
@@ -338,6 +341,7 @@ final class APITest extends TestCase
         'last_login' => 0,
         'character_count' => 0
       ), array(
+        'cp' => 0,
         'username' => 'testuser2',
         'disp_name' => 'testuser2display',
         'email' => 'testing@test.test',
@@ -356,6 +360,7 @@ final class APITest extends TestCase
       }
 
       if($this->use_mock) {
+        $this->assertEquals(1000000, $accounts[0]->cp);
         $this->assertEquals('testuser', $accounts[0]->username);
         $this->assertEquals('testuserdisplay', $accounts[0]->displayName);
         $this->assertEquals('testing@test.test', $accounts[0]->email);

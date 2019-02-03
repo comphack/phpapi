@@ -332,7 +332,7 @@ class API
     } // function Register
 
     /**
-     * Allows you to request an account from the game server bu username.
+     * Allows you to request an account from the game server by username.
      * @param string $username The username of the account to be retrived
      */
     public function GetAccount($username) {
@@ -341,6 +341,7 @@ class API
       ));
 
       if(false === $response ||
+        !property_exists($response, 'cp') ||
         !property_exists($response, 'username') ||
         !property_exists($response, 'disp_name') ||
         !property_exists($response, 'email') ||
@@ -354,6 +355,7 @@ class API
       }
 
       $object = new \stdClass();
+      $object->cp = $response->cp;
       $object->username = $response->username;
       $object->displayName = $response->disp_name;
       $object->email = $response->email;
@@ -385,6 +387,7 @@ class API
       foreach ($response->accounts as $account) {
 
         $object = new \stdClass();
+        $object->cp = $account->cp;
         $object->username = $account->username;
         $object->displayName = $account->disp_name;
         $object->email = $account->email;
