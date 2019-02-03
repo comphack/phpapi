@@ -89,7 +89,7 @@ final class APITest extends TestCase
             $password_hash = hash('sha512', $this->password . $this->salt);
             $request['challenge'] = hash('sha512', $password_hash .
                 $this->challenge);
-            $request['username'] = $this->username;
+            $request['session_username'] = $this->username;
             $this->challenge = substr(self::$faker->md5, 0, 10);
             $response['challenge'] = $this->challenge;
         }
@@ -151,7 +151,7 @@ final class APITest extends TestCase
             $password_hash = hash('sha512', $this->password . $this->salt);
             $request['challenge'] = hash('sha512', $password_hash .
                 $this->challenge);
-            $request['username'] = $this->username;
+            $request['session_username'] = $this->username;
             $this->challenge = substr(self::$faker->md5, 0, 10);
         }
 
